@@ -1,0 +1,66 @@
+services:
+  clickhouse:
+    # Using latest for now, later it will be some stable version
+    image: clickhouse:latest
+    container_name: clickhouse-forecast
+    hostname: forecast
+    restart: unless-stopped
+    
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9004:9004"
+      - "9009:9009"
+    
+    environment:
+      - CLICKHOUSE_DB=forecast_main
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=/run/secrets/clickhouse_admin
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - TZ=Europe/Moscow
+    
+    secrets:
+      - clickhouse_admin
+      - clickhouse_user
+    
+    volumes:
+      # Saving user configuration
+      - clickhouse_users_config:/etc/clickhouse-server/users.d
+      # Data storage
+      - ./data/clickhouse:/var/lib/clickhouse
+      # Config files
+      - ./clickhouse/config.xml:/etc/clickhouse-server/config.d/custom-config.xml
+      # Init scripts
+      - ./clickhouse/init_users.sh:/docker-entrypoint-initdb.d/init-users.sh:ro
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+    
+    networks:
+      - forecast-network
+    
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  # Explicitly declaring volumes
+  clickhouse_users_config:
+
+networks:
+  forecast-network:
+    driver: bridge
+    name: forecast-network
+
+secrets:
+   clickhouse_admin:
+      file: ./clickhouse/secret/db_root_password.txt
+   clickhouse_user:
+      file: ./clickhouse/secret/db_password.txt

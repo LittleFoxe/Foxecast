@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<yandex>
+    <logger>
+        <level>information</level>
+        <log>/var/lib/clickhouse/log/clickhouse-server.log</log>
+        <errorlog>/var/lib/clickhouse/log/clickhouse-server.err.log</errorlog>
+        <size>1000M</size>
+        <count>10</count>
+    </logger>
+
+    <listen_host>0.0.0.0</listen_host>
+    
+    <max_connections>4096</max_connections>
+    <keep_alive_timeout>3</keep_alive_timeout>
+    
+    <max_concurrent_queries>100</max_concurrent_queries>
+    
+    <path>/var/lib/clickhouse/</path>
+    <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+    
+    <!-- Настройки удаления для больших данных -->
+    <max_table_size_to_drop>0</max_table_size_to_drop>
+    <max_partition_size_to_drop>0</max_partition_size_to_drop>
+</yandex>
