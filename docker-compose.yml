@@ -25,9 +25,9 @@ services:
     
     volumes:
       # Saving user configuration
-      - clickhouse_users_config:/etc/clickhouse-server/users.d
+      - clickhouse_users:/etc/clickhouse-server/users.d
       # Data storage
-      - ./data/clickhouse:/var/lib/clickhouse
+      - clickhouse_data:/var/lib/clickhouse
       # Config files
       - ./clickhouse/config.xml:/etc/clickhouse-server/config.d/custom-config.xml
       # Init scripts
@@ -52,7 +52,10 @@ services:
 
 volumes:
   # Explicitly declaring volumes
-  clickhouse_users_config:
+  clickhouse_users:
+    external: false
+  clickhouse_data:
+    external: false
 
 networks:
   forecast-network:
