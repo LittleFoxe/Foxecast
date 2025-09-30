@@ -1,50 +1,47 @@
--- Используем переменные окружения для паролей
-SET allow_settings_after_format_in_insert=1;
-
--- Создаём базу данных для будущих записей
+-- Create database for future records
 CREATE DATABASE IF NOT EXISTS forecast_main;
 USE forecast_main;
--- Создаём таблицу для хранения прогностических данных
+-- Create table for storing forecast data
 CREATE TABLE IF NOT EXISTS forecast_data (
-    -- Уникальный ID для данного сообщения
+    -- Unique ID for this message
     id UUID,
 
-    -- Дата формирования прогноза
+    -- Date when forecast was generated
     forecast_date DateTime,
-    -- Количество часов, на которые был сформирован прогноз
+    -- Number of hours for which the forecast was generated
     forecast_hour UInt16,
-    -- Название прогностической модели
+    -- Name of the forecast model
     data_source String,
     
-    --Название параметра
+    -- Parameter name
     parameter String,
-    -- единица измерения параметра
+    -- Parameter unit of measurement
     parameter_unit String,
-    -- Тип поверхности (изобарический уровень, высота в метрах, поверхность Земли)
+    -- Surface type (isobaric level, height in meters, mean sea level, ...)
     surface_type String,
-    -- Значение высоты для данного типа
+    -- Height value for this type
     surface_value Float32,
     
-    -- Краевые координаты сетки
+    -- Grid boundary coordinates
     min_lon Decimal(9,6),
     max_lon Decimal(9,6), 
     min_lat Decimal(9,6),
     max_lat Decimal(9,6),
-    -- Шаги сетки
+    -- Grid steps
     lon_step Decimal(9,6),
     lat_step Decimal(9,6),
-    -- Количество точек по широте и долготе в отдельности
+    -- Number of points along latitude and longitude
     grid_size_lat UInt16,
     grid_size_lon UInt16,
     
-    -- Значения в узлах сетки (двумерный массив сетки, развёрнутый в одномерный массив) 
+    -- Values at grid nodes (2D grid array is turned into 1D array)
     values Array(Float32),
     
-    -- Служебные поля
+    -- Auxiliary fields
     created_at DateTime DEFAULT now(),
     file_name String,
     
-    -- Индексы
+    -- Indexes
     INDEX idx_geo_coverage (min_lon, max_lon, min_lat, max_lat) TYPE minmax GRANULARITY 3,
     INDEX idx_parameter_surface (parameter, surface_type, surface_value) TYPE bloom_filter GRANULARITY 2,
     INDEX idx_forecast_time (forecast_date, forecast_hour) TYPE minmax GRANULARITY 2,

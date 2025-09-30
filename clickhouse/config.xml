@@ -18,7 +18,7 @@
     <path>/var/lib/clickhouse/</path>
     <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
     
-    <!-- Настройки удаления для больших данных -->
+    <!-- Options for large tables -->
     <max_table_size_to_drop>0</max_table_size_to_drop>
     <max_partition_size_to_drop>0</max_partition_size_to_drop>
 </yandex>

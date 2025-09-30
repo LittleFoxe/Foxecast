@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# Читаем пароль из файла секрета
+# Get passwords from secrets
 ADMIN_PASSWORD=$(cat /run/secrets/clickhouse_admin)
 USER_PASSWORD=$(cat /run/secrets/clickhouse_user)
 
-# Формируем XML-конфигурацию для пользователей
+# Create new XML-configuration for users
 cat > /etc/clickhouse-server/users.d/users.xml << EOL
 <clickhouse>
     <users>
