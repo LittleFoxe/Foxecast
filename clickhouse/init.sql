@@ -1,5 +1,7 @@
 -- Create database for future records
 CREATE DATABASE IF NOT EXISTS forecast_main;
+-- Create database for testing
+CREATE DATABASE IF NOT EXISTS forecast_test;
 USE forecast_main;
 -- Create table for storing forecast data
 CREATE TABLE IF NOT EXISTS forecast_data (
