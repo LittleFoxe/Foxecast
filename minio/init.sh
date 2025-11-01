@@ -19,6 +19,10 @@ set -o history
 /usr/bin/mc mb myminio/forecast-data --ignore-existing
 
 # Check bucket creation
-/usr/bin/mc ls myminio/
+/usr/bin/mc ls myminio/forecast-data
+
+# Setting bucket to open for downloading
+# That will keep some services independent from S3 as a whole
+/usr/bin/mc anonymous set download myminio/forecast-data
 
 echo "MinIO initialization completed successfully"
