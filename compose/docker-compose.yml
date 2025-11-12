@@ -60,12 +60,11 @@ services:
     ports:
       - "9101:9001"  # Console port
       - "9100:9000"  # API port
+    env_file: ./minio/secret/.env
     
     environment:
-      - MINIO_ROOT_USER_FILE=/run/secrets/minio_user
-      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
       - MINIO_DEFAULT_BUCKETS=forecast-data
-      - MINIO_DOMAIN=localhost
+      - MINIO_DOMAIN=localhost # Used as domain inside the container
     
     volumes:
       - minio_data:/data
@@ -74,10 +73,6 @@ services:
     
     networks:
       - forecast-network
-
-    secrets:
-      - minio_user
-      - minio_password
     
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
@@ -98,17 +93,10 @@ services:
     restart: "no"
     depends_on:
       - minio
-
-    environment:
-      - MINIO_ROOT_USER_FILE=/run/secrets/minio_user
-      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
+    env_file: ./minio/secret/.env
 
     networks:
       - forecast-network
-
-    secrets:
-      - minio_user
-      - minio_password
 
     entrypoint: >
       /bin/sh -c '

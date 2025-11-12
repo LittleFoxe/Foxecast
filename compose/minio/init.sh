@@ -7,8 +7,8 @@ echo "Waiting for MinIO to start..."
 sleep 5
 
 # Using env for creating aliases
-USERNAME=$(cat ${MINIO_ROOT_USER_FILE})
-PASSWORD=$(cat ${MINIO_ROOT_PASSWORD_FILE})
+USERNAME=$MINIO_ROOT_USER
+PASSWORD=$MINIO_ROOT_PASSWORD
 
 # Configure mc alias
 set +o history
