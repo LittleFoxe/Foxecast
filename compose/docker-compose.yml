@@ -20,10 +20,6 @@ services:
       - CLICKHOUSE_USER=default # Used to access the DB and change its settings
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
     
-    # secrets:
-    #   - clickhouse_admin
-    #   - clickhouse_user
-    
     volumes:
       # Saving user configuration
       - clickhouse_users:/etc/clickhouse-server/users.d
@@ -174,24 +170,3 @@ networks:
   forecast-network:
     driver: bridge
     name: forecast-network
-
-secrets:
-  clickhouse_admin:
-    file: ./clickhouse/secret/db_root_password.txt
-  clickhouse_user:
-    file: ./clickhouse/secret/db_password.txt
-
-  minio_user:
-    file: ./minio/secret/minio_user.txt
-  minio_password:
-    file: ./minio/secret/minio_pass.txt
-
-  rabbitmq_user:
-    file: ./rabbitmq/secret/rabbitmq_user.txt
-  rabbitmq_pass:
-    file: ./rabbitmq/secret/rabbitmq_pass.txt
-
-  inserter_main:
-    file: ./inserter/secret/main.env
-  inserter_test:
-    file: ./inserter/secret/.env
