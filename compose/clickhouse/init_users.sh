@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Get passwords from secrets
-ADMIN_PASSWORD=$(cat /run/secrets/clickhouse_admin)
-USER_PASSWORD=$(cat /run/secrets/clickhouse_user)
+ADMIN_PASSWORD=$ADMIN_PASSWORD
+USER_PASSWORD=$USER_PASSWORD
 
 # Create new XML-configuration for users
 cat > /etc/clickhouse-server/users.d/users.xml << EOL

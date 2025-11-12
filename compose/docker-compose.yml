@@ -1,10 +1,13 @@
 services:
+
+
   clickhouse:
     # Using latest for now, later it will be some stable version
     image: clickhouse:latest
     container_name: clickhouse-forecast
     hostname: clickhouse
     restart: unless-stopped
+    env_file: ./clickhouse/secret/.env
     
     ports:
       - "8123:8123"
@@ -14,13 +17,12 @@ services:
     
     environment:
       - CLICKHOUSE_DB=forecast_main
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=/run/secrets/clickhouse_admin
+      - CLICKHOUSE_USER=default # Used to access the DB and change its settings
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
     
-    secrets:
-      - clickhouse_admin
-      - clickhouse_user
+    # secrets:
+    #   - clickhouse_admin
+    #   - clickhouse_user
     
     volumes:
       # Saving user configuration
@@ -78,7 +80,7 @@ services:
       - minio_password
     
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -174,8 +176,7 @@ services:
     
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq # Used basically for shared cache with rabbitmq-forecast
-      - ./rabbitmq/init.sh:/etc/init/init.sh:ro
-      - ./rabbitmq/user_init.sh:/etc/init/user_init.sh:ro
+      - ./rabbitmq/init.sh:/etc/init/ # Mount init scripts
 
 volumes:
   # Explicitly declaring volumes
@@ -198,11 +199,18 @@ secrets:
     file: ./clickhouse/secret/db_root_password.txt
   clickhouse_user:
     file: ./clickhouse/secret/db_password.txt
+
   minio_user:
     file: ./minio/secret/minio_user.txt
   minio_password:
     file: ./minio/secret/minio_pass.txt
+
   rabbitmq_user:
     file: ./rabbitmq/secret/rabbitmq_user.txt
   rabbitmq_pass:
     file: ./rabbitmq/secret/rabbitmq_pass.txt
+
+  inserter_main:
+    file: ./inserter/secret/main.env
+  inserter_test:
+    file: ./inserter/secret/.env
