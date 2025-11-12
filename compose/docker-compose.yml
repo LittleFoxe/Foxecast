@@ -144,17 +144,10 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    
-    environment:
-      - RABBITMQ_DEFAULT_USER_FILE=/run/secrets/rabbitmq_user
-      - RABBITMQ_DEFAULT_PASS_FILE=/run/secrets/rabbitmq_pass
+    env_file: ./rabbitmq/secret/.env
     
     networks:
       - forecast-network
-    
-    secrets:
-      - rabbitmq_user
-      - rabbitmq_pass
     
     entrypoint: >
       /bin/sh -c '
@@ -164,7 +157,7 @@ services:
     
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq # Used basically for shared cache with rabbitmq-forecast
-      - ./rabbitmq/init.sh:/etc/init/ # Mount init scripts
+      - ./rabbitmq/init.sh:/etc/init/init.sh:ro # Mount init scripts
 
 volumes:
   # Explicitly declaring volumes
