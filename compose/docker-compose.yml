@@ -1,5 +1,44 @@
 services:
+  test_inserter:
+    image: test_foxecast_inserter:1.0.0
+    container_name: test_inserter
+    env_file: ./inserter/secret/test_env/.env
 
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - forecast-network
+
+  inserter:
+    image: foxecast_inserter:1.0.0
+    container_name: inserter
+    ports:
+      - "8001:8000"
+    env_file: ./inserter/secret/test_env/.env
+
+    depends_on:
+      test_inserter:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - forecast-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
 
   clickhouse:
     # Using latest for now, later it will be some stable version
@@ -60,7 +99,7 @@ services:
     
     environment:
       - MINIO_DEFAULT_BUCKETS=forecast-data
-      - MINIO_DOMAIN=localhost # Used as domain inside the container
+      - MINIO_DOMAIN=minio
     
     volumes:
       - minio_data:/data
@@ -71,7 +110,7 @@ services:
       - forecast-network
     
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://minio:9000/minio/health/live || exit 1"]
       interval: 30s
       timeout: 20s
       retries: 3
