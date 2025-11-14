@@ -1,10 +1,52 @@
 services:
+  test_inserter:
+    image: test_foxecast_inserter:1.0.0
+    container_name: test_inserter
+    env_file: ./inserter/secret/test_env/.env
+
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - forecast-network
+
+  inserter:
+    image: foxecast_inserter:1.0.0
+    container_name: inserter
+    ports:
+      - "8001:8000"
+    env_file: ./inserter/secret/test_env/.env
+
+    depends_on:
+      test_inserter:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - forecast-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
+
   clickhouse:
     # Using latest for now, later it will be some stable version
     image: clickhouse:latest
     container_name: clickhouse-forecast
     hostname: clickhouse
     restart: unless-stopped
+    env_file: ./clickhouse/secret/.env
     
     ports:
       - "8123:8123"
@@ -14,13 +56,8 @@ services:
     
     environment:
       - CLICKHOUSE_DB=forecast_main
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=/run/secrets/clickhouse_admin
+      - CLICKHOUSE_USER=default # Used to access the DB and change its settings
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
-    
-    secrets:
-      - clickhouse_admin
-      - clickhouse_user
     
     volumes:
       # Saving user configuration
@@ -58,12 +95,11 @@ services:
     ports:
       - "9101:9001"  # Console port
       - "9100:9000"  # API port
+    env_file: ./minio/secret/.env
     
     environment:
-      - MINIO_ROOT_USER_FILE=/run/secrets/minio_user
-      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
       - MINIO_DEFAULT_BUCKETS=forecast-data
-      - MINIO_DOMAIN=localhost
+      - MINIO_DOMAIN=minio
     
     volumes:
       - minio_data:/data
@@ -72,13 +108,9 @@ services:
     
     networks:
       - forecast-network
-
-    secrets:
-      - minio_user
-      - minio_password
     
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "curl -f http://minio:9000/minio/health/live || exit 1"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -96,17 +128,10 @@ services:
     restart: "no"
     depends_on:
       - minio
-
-    environment:
-      - MINIO_ROOT_USER_FILE=/run/secrets/minio_user
-      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
+    env_file: ./minio/secret/.env
 
     networks:
       - forecast-network
-
-    secrets:
-      - minio_user
-      - minio_password
 
     entrypoint: >
       /bin/sh -c '
@@ -154,17 +179,10 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    
-    environment:
-      - RABBITMQ_DEFAULT_USER_FILE=/run/secrets/rabbitmq_user
-      - RABBITMQ_DEFAULT_PASS_FILE=/run/secrets/rabbitmq_pass
+    env_file: ./rabbitmq/secret/.env
     
     networks:
       - forecast-network
-    
-    secrets:
-      - rabbitmq_user
-      - rabbitmq_pass
     
     entrypoint: >
       /bin/sh -c '
@@ -174,8 +192,7 @@ services:
     
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq # Used basically for shared cache with rabbitmq-forecast
-      - ./rabbitmq/init.sh:/etc/init/init.sh:ro
-      - ./rabbitmq/user_init.sh:/etc/init/user_init.sh:ro
+      - ./rabbitmq/init.sh:/etc/init/init.sh:ro # Mount init scripts
 
 volumes:
   # Explicitly declaring volumes
@@ -192,17 +209,3 @@ networks:
   forecast-network:
     driver: bridge
     name: forecast-network
-
-secrets:
-  clickhouse_admin:
-    file: ./clickhouse/secret/db_root_password.txt
-  clickhouse_user:
-    file: ./clickhouse/secret/db_password.txt
-  minio_user:
-    file: ./minio/secret/minio_user.txt
-  minio_password:
-    file: ./minio/secret/minio_pass.txt
-  rabbitmq_user:
-    file: ./rabbitmq/secret/rabbitmq_user.txt
-  rabbitmq_pass:
-    file: ./rabbitmq/secret/rabbitmq_pass.txt

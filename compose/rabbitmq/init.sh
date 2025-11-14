@@ -4,8 +4,8 @@ set -e # Exit immediately if a command exits with a non-zero status
 echo "Initializing RabbitMQ default users..."
 
 # Read login and password from secrets
-RABBITMQ_DEFAULT_USER=$(cat /run/secrets/rabbitmq_user)
-RABBITMQ_DEFAULT_PASS=$(cat /run/secrets/rabbitmq_pass)
+RABBITMQ_DEFAULT_USER=$RABBITMQ_DEFAULT_USER
+RABBITMQ_DEFAULT_PASS=$RABBITMQ_DEFAULT_PASS
 
 # Connecting to main RabbitMQ node
 RABBITMQ_NODE="rabbit@rabbitmq"  # Basic name of the main node
@@ -32,21 +32,21 @@ echo "Default user successfully configured!\n\n"
 
 echo "Initializing RabbitMQ exchanges and queues..."
 
-# Creating Exchange
-rabbitmqadmin --host rabbitmq --port 15672 --username $(cat /run/secrets/rabbitmq_user) --password $(cat /run/secrets/rabbitmq_pass) \
+# Creating exchange
+rabbitmqadmin --host rabbitmq --port 15672 --username $RABBITMQ_DEFAULT_USER --password $RABBITMQ_DEFAULT_PASS \
     declare exchange name=forecast_exchange type=direct durable=true
 # Creating queue for open source data
-rabbitmqadmin --host rabbitmq --port 15672 --username $(cat /run/secrets/rabbitmq_user) --password $(cat /run/secrets/rabbitmq_pass) \
+rabbitmqadmin --host rabbitmq --port 15672 --username $RABBITMQ_DEFAULT_USER --password $RABBITMQ_DEFAULT_PASS \
     declare queue name=opensource_queue durable=true
 # Connecting queue to exchange
-rabbitmqadmin --host rabbitmq --port 15672 --username $(cat /run/secrets/rabbitmq_user) --password $(cat /run/secrets/rabbitmq_pass) \
+rabbitmqadmin --host rabbitmq --port 15672 --username $RABBITMQ_DEFAULT_USER --password $RABBITMQ_DEFAULT_PASS \
     declare binding source=forecast_exchange destination=opensource_queue routing_key=forecast.routing.key
 # Creating dead exchange with its queues
-rabbitmqadmin --host rabbitmq --port 15672 --username $(cat /run/secrets/rabbitmq_user) --password $(cat /run/secrets/rabbitmq_pass) \
+rabbitmqadmin --host rabbitmq --port 15672 --username $RABBITMQ_DEFAULT_USER --password $RABBITMQ_DEFAULT_PASS \
     declare exchange name=dead_exchange type=direct durable=true
-rabbitmqadmin --host rabbitmq --port 15672 --username $(cat /run/secrets/rabbitmq_user) --password $(cat /run/secrets/rabbitmq_pass) \
+rabbitmqadmin --host rabbitmq --port 15672 --username $RABBITMQ_DEFAULT_USER --password $RABBITMQ_DEFAULT_PASS \
     declare queue name=dead_opensource_queue durable=true
-rabbitmqadmin --host rabbitmq --port 15672 --username $(cat /run/secrets/rabbitmq_user) --password $(cat /run/secrets/rabbitmq_pass) \
+rabbitmqadmin --host rabbitmq --port 15672 --username $RABBITMQ_DEFAULT_USER --password $RABBITMQ_DEFAULT_PASS \
     declare binding source=dead_exchange destination=dead_opensource_queue routing_key=dead.letter.routing.key
 
 echo "RabbitMQ initialization completed!"
