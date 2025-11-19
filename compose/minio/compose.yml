@@ -1,0 +1,58 @@
+services:
+  minio:
+    # Using latest for now, but in production it should be some stable version
+    image: minio/minio:latest
+    container_name: minio-forecast
+    hostname: minio
+    restart: unless-stopped
+    # Ports are changed from default because of Clickhouse
+    ports:
+      - "9101:9001"  # Console port
+      - "9100:9000"  # API port
+    env_file: ./secret/.env
+    
+    environment:
+      - MINIO_DEFAULT_BUCKETS=forecast-data
+      - MINIO_DOMAIN=minio
+    
+    volumes:
+      - minio_data:/data
+    
+    command: server /data --console-address ":9001"
+    
+    networks:
+      - forecast-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://minio:9000/minio/health/live || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 40s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio_init:
+    image: minio/mc:latest
+    container_name: minio-init
+    restart: "no"
+    depends_on:
+      - minio
+    env_file: ./secret/.env
+
+    networks:
+      - forecast-network
+
+    entrypoint: >
+      /bin/sh -c '
+      sleep 5;
+      sh /etc/minio/init/init.sh;
+      exit 0;
+      '
+
+    volumes:
+      - ./init.sh:/etc/minio/init/init.sh:ro
