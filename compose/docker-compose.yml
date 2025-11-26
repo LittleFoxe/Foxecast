@@ -7,6 +7,7 @@ include:
   - path: ./clickhouse/compose.yml
   - path: ./minio/compose.yml
   - path: ./rabbitmq/compose.yml
+  - path: ./airflow/compose.yml
 
 # All services should be added as separate modules through 'include'
 

@@ -1,0 +1,276 @@
+# Common configuration block for all Airflow services
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - ./secret/.env
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'false'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW_CONFIG: '/opt/airflow/airflow.cfg'
+  # Only logs remain as volume, everything else is built into the image
+  volumes:
+    - airflow_logs:/opt/airflow/logs
+  networks:
+    - airflow-network
+  user: "50000:0"
+  depends_on: &airflow-common-depends-on
+    airflow-postgres:
+      condition: service_healthy
+    airflow-redis:
+      condition: service_healthy
+
+services:
+  airflow-postgres:
+    image: postgres:16
+    container_name: airflow-postgres
+    hostname: airflow-postgres
+    restart: unless-stopped
+    env_file:
+      - ./secret/postgres/.env
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    networks:
+      - airflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow-redis:
+    image: redis:latest
+    container_name: airflow-redis
+    hostname: airflow-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - airflow_redis_data:/data
+    networks:
+      - airflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+
+  airflow-apiserver:
+    <<: *airflow-common
+    command: api-server
+    container_name: airflow-apiserver
+    hostname: airflow-apiserver
+    env_file:
+    - ./secret/.env
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://airflow-apiserver:8080/api/v2/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    container_name: airflow-scheduler
+    hostname: airflow-scheduler
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://airflow-scheduler:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    container_name: airflow-processor
+    hostname: airflow-processor
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - airflow-network
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-worker:
+    <<: *airflow-common
+    command: celery worker
+    container_name: airflow-worker
+    hostname: airflow-worker
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - >
+          celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || 
+          celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - airflow-network
+    environment:
+      <<: *airflow-common-env
+      DUMB_INIT_SETSID: "0"
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-apiserver:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    container_name: airflow-triggerer
+    hostname: airflow-triggerer
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - airflow-network
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    hostname: airflow-init
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+    env_file:
+      - ./secret/init/.env
+      - ./secret/.env
+    entrypoint: /bin/bash
+    command: >
+      -c '
+      echo "Initializing Airflow...";
+      chmod +x /opt/airflow/init.sh;
+      /opt/airflow/init.sh;
+      echo "Initialization completed";
+      '
+    volumes:
+      - airflow_logs:/opt/airflow/logs
+      - ./init.sh:/opt/airflow/init.sh:ro
+    networks:
+      - airflow-network
+    user: "0:0"
+
+  airflow-cli:
+    <<: *airflow-common
+    container_name: airflow-cli
+    hostname: airflow-cli
+    profiles:
+      - debug
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    environment:
+      <<: *airflow-common-env
+      CONNECTION_CHECK_MAX_COUNT: "0"
+    command:
+      - bash
+      - -c
+      - airflow
+    depends_on:
+      <<: *airflow-common-depends-on
+
+  airflow-flower:
+    <<: *airflow-common
+    command: celery flower
+    container_name: airflow-flower
+    hostname: airflow-flower
+    profiles:
+      - flower
+    ports:
+      - "5555:5555"
+    networks:
+      - airflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://airflow-flower:5555/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  airflow_postgres_data:
+    external: false
+  airflow_redis_data:
+    external: false
+  airflow_logs:
+    external: false
+
+networks:
+  airflow-network:
+    driver: bridge
+    name: airflow-network
