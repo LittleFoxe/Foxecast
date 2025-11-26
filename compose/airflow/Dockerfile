@@ -1,14 +1,14 @@
 FROM apache/airflow:latest
 
 # Install additional packages if needed
-# RUN pip install --no-cache-dir some-additional-package
+RUN pip install --no-cache-dir apache-airflow-providers-fab
 
 # Copy configuration files
-COPY airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+COPY airflow.cfg ./airflow.cfg
 
 # Copy DAGs and plugins into the image
-COPY dags/ ${AIRFLOW_HOME}/dags/
-COPY plugins/ ${AIRFLOW_HOME}/plugins/
+COPY dags/ ./dags/
+COPY plugins/ ./plugins/
 
 # Set proper permissions for airflow user
 USER root

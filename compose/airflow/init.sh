@@ -2,18 +2,9 @@
 
 set -euo pipefail
 
-if [[ -z "${AIRFLOW_UID:50000}" ]]; then
-    echo
-    echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID not set!\e[0m"
-    echo "If you are on Linux, you SHOULD follow the instructions below to set "
-    echo "AIRFLOW_UID environment variable, otherwise files will be owned by root."
-    echo "For other operating systems you can get rid of the warning with manually created .env file:"
-    echo "    See: https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#setting-the-right-airflow-user"
-    echo
+if [[ -z "$AIRFLOW_UID" ]]; then
     export AIRFLOW_UID=$(id -u)
 fi
-
-airflow db migrate
 
 one_meg=1048576
 mem_available=$(( $(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / one_meg ))
@@ -78,14 +69,14 @@ echo
 ls -la /opt/airflow/{logs,dags,plugins,config}
 
 echo
-echo "Change ownership of files in /opt/airflow to ${AIRFLOW_UID}:0"
+echo "Change ownership of files in /opt/airflow to ${AIRFLOW_UID}:50000"
 echo
-chown -R "${AIRFLOW_UID}:0" /opt/airflow/
+chown -R "${AIRFLOW_UID}:50000" /opt/airflow/
 
 echo
-echo "Change ownership of files in shared volumes to ${AIRFLOW_UID}:0"
+echo "Change ownership of files in shared volumes to ${AIRFLOW_UID}:50000"
 echo
-chown -v -R "${AIRFLOW_UID}:0" /opt/airflow/{logs,dags,plugins,config}
+chown -v -R "${AIRFLOW_UID}:50000" /opt/airflow/{logs,dags,plugins,config}
 
 echo
 echo "Files in shared volumes:"
