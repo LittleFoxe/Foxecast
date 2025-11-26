@@ -16,7 +16,7 @@ services:
 
   inserter:
     image: foxecast_inserter:1.0.0
-    container_name: inserter
+    container_name: inserter-forecast
     ports:
       - "8001:8000"
     env_file: ./secret/test_env/.env

@@ -1,0 +1,21 @@
+# Airflow Admin Credentials
+AIRFLOW_ADMIN_USERNAME=user
+AIRFLOW_ADMIN_PASSWORD=user
+AIRFLOW_ADMIN_EMAIL=airflow@forecast.com
+AIRFLOW_ADMIN_FIRSTNAME=John
+AIRFLOW_ADMIN_LASTNAME=Doe
+
+# JWT Configuration for API Authentication
+AIRFLOW__API_AUTH__JWT_SECRET=your_jwt_secret
+AIRFLOW__API_AUTH__JWT_ALGORITHM=HS256
+AIRFLOW__API_AUTH__JWT_ISSUER=user
+AIRFLOW__API_AUTH__JWT_LIFETIME_SECONDS=3600
+
+# Other Airflow environment variables
+AIRFLOW__CORE__FERNET_KEY=''
+# URL structure: postgresql+psycopg2://{username}:{password}@{postgres-container-in-compose}/{database_name}
+AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user@airflow-postgres/airflow
+# Make sure that redis runs on port 6379, airflow-redis is the name of the container in compose
+AIRFLOW__CELERY__BROKER_URL=redis://:@airflow-redis:6379/0
+# URL structure: db+postgresql://{username}:{password}@{postgres-container-in-compose}/{database_name}
+AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://user:user@airflow-postgres/airflow

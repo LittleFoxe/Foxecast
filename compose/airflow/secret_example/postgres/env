@@ -1,0 +1,4 @@
+# Airflow Postgres variables (should be transfered to base ./secret/.env file)
+POSTGRES_USER: user
+POSTGRES_PASSWORD: user
+POSTGRES_DB: airflow
