@@ -15,6 +15,17 @@ services:
     networks:
       - forecast-network
     
+    environment:
+      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=0.6  # Ограничение использования памяти до 60%
+      - RABBITMQ_DEFAULT_VHOST=/
+    
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 512M
+    
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       interval: 30s
@@ -39,6 +50,11 @@ services:
     
     networks:
       - forecast-network
+    
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     
     entrypoint: >
       /bin/sh -c '
