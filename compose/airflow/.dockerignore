@@ -1,0 +1,34 @@
+# Python virtual environments
+.venv/
+venv/
+
+# Cache directories
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.cache/
+**/__pycache__/
+
+# Compiled Python artifacts
+*.pyc
+*.pyo
+*.pyd
+
+# Secrets
+secret/
+secret_example/
+
+# Local environment files
+.env
+*.env
+
+# Logs and temp files
+logs/
+*.log
+tmp/
+*.tmp
+
+# Requirements
+# TODO: Set specific versions of libraries and images instead of :latest
+req*.txt
+
