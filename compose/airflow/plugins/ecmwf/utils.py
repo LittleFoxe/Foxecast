@@ -7,20 +7,20 @@ from typing import Dict, List
 from airflow.exceptions import AirflowException
 
 
-def calculate_ecmwf_params(execution_date: datetime) -> Dict[str, str]:
+def calculate_ecmwf_params(data_interval_start: datetime) -> Dict[str, str]:
     """
     Calculate parameters for ECMWF URL based on DAG execution date.
     Params:
-        execution_date (datetime): date and time of DAG execution
+        data_interval_start (datetime): date and time of DAG execution
     Returns:
         Dict: dictionary with ECMWF Open Data keys: date_str, time_str, data_type, base_url
     """
     # Date from previous day
-    target_date = execution_date - timedelta(days=1)
+    target_date = data_interval_start - timedelta(days=1)
     date_str = target_date.strftime("%Y%m%d")
     
     # DAG execution time (00, 06, 12, 18) -> 00z, 06z, 12z, 18z
-    hour = execution_date.hour
+    hour = data_interval_start.hour
     time_str = f"{hour:02d}z"
     
     # Determine data type

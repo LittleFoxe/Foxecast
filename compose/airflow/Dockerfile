@@ -1,7 +1,11 @@
 FROM apache/airflow:latest
 
 # Install additional packages if needed
-RUN pip install --no-cache-dir apache-airflow-providers-fab
+RUN pip install --no-cache-dir \
+    apache-airflow-providers-fab \
+    apache-airflow-providers-amazon \
+    apache-airflow-providers-http \
+    pika
 
 # Copy configuration files
 COPY airflow.cfg ./airflow.cfg
@@ -17,6 +21,9 @@ RUN mkdir -p ${AIRFLOW_HOME}/logs && \
     chmod -R 755 ${AIRFLOW_HOME}/dags ${AIRFLOW_HOME}/plugins ${AIRFLOW_HOME}/logs
 
 USER airflow
+
+# Set Python path to navigate between DAGs and plugins
+ENV PYTHONPATH=/opt/airflow:$PYTHONPATH
 
 # Verify that DAGs and plugins were copied correctly
 RUN echo "DAGs files:" && find ${AIRFLOW_HOME}/dags -type f | wc -l && \
