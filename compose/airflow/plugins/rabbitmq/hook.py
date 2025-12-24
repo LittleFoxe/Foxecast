@@ -7,7 +7,7 @@ from typing import Any, Optional, Dict
 import json
 import pika
 
-from airflow.hooks.base import BaseHook
+from airflow.sdk.bases.hook import BaseHook
 
 
 class RabbitMQHook(BaseHook):
