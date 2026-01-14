@@ -7,8 +7,8 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      minio_init:
+        condition: service_completed_successfully
       rabbitmq:
         condition: service_healthy
     networks:

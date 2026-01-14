@@ -25,4 +25,13 @@ set -o history
 # That will keep some services independent from S3 as a whole
 /usr/bin/mc anonymous set download myminio/forecast-data
 
+# Downloading sample file for testing
+if [ -f /data/sample.grib2 ]; then
+    echo "Uploading sample.grib2 to the bucket..."
+    /usr/bin/mc cp /data/sample.grib2 myminio/forecast-data/
+    echo "File sample.grib2 uploaded successfully!"
+else
+    echo "Warning: File /data/sample.grib2 not found! Bucket is empty."
+fi
+
 echo "MinIO initialization completed successfully"

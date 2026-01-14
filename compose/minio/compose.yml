@@ -48,7 +48,8 @@ services:
     container_name: minio-init
     restart: "no"
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     env_file: ./secret/.env
 
     networks:
@@ -61,10 +62,10 @@ services:
 
     entrypoint: >
       /bin/sh -c '
-      sleep 5;
       sh /etc/minio/init/init.sh;
       exit 0;
       '
 
     volumes:
       - ./init.sh:/etc/minio/init/init.sh:ro
+      - ./sample.grib2:/data/sample.grib2:ro
