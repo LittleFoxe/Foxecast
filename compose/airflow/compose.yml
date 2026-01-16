@@ -17,7 +17,7 @@ x-airflow-common: &airflow-common
     AIRFLOW_CONFIG: '/opt/airflow/airflow.cfg'
 
     # Settings for ECMWF connection test
-    AIRFLOW_CONN_ECMWF_HTTP: '{"conn_type":"HTTP","schema":"https","host":"data.ecmwf.int/forecasts/"}'
+    AIRFLOW_CONN_ECMWF_HTTP: '{"conn_type":"HTTP","schema":"https","host":"data.ecmwf.int"}'
 
     # Other parameters are set in secrets
 
@@ -92,6 +92,9 @@ services:
       timeout: 10s
       retries: 5
     restart: unless-stopped
+    networks:
+      - airflow-network
+      - forecast-network
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
@@ -112,6 +115,8 @@ services:
       timeout: 10s
       retries: 5
     restart: unless-stopped
+    networks:
+      - airflow-network
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:

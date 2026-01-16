@@ -7,6 +7,35 @@ from typing import Dict, List
 from airflow.exceptions import AirflowException
 
 
+def _floor_hours(hour: int) -> int:
+    """
+    Rounds the hour from 0-24 format to the nearest floor values from [0, 6, 12, 18] array.
+    
+    It is more preferable than math round because ECMWF might not have the necessary data at the time.
+
+    Example:
+        ```
+        hour1 = _round_hours(14) # hour1 == 12
+        hour2 = _round_hours(17) # hour2 == 12
+        hour3 = _round_hours(18) # hour3 == 18
+        ```
+    
+    Params:
+        hour (int): Current hour that needs to be floored
+    Returns:
+        (int): floors hour to nearest value from [0, 6, 12, 18] array
+    """
+    # 'if's might be replaced with match/case notation, 
+    # but it is not supported in Python version 3.7 or older, 
+    # so we use basic 'if' just in case
+    if hour < 6:
+        return 0
+    if hour < 12:
+        return 6
+    if hour < 18:
+        return 12
+    return 18
+
 def calculate_ecmwf_params(data_interval_start: datetime) -> Dict[str, str]:
     """
     Calculate parameters for ECMWF URL based on DAG execution date.
@@ -19,15 +48,16 @@ def calculate_ecmwf_params(data_interval_start: datetime) -> Dict[str, str]:
     target_date = data_interval_start - timedelta(days=1)
     date_str = target_date.strftime("%Y%m%d")
     
-    # DAG execution time (00, 06, 12, 18) -> 00z, 06z, 12z, 18z
-    hour = data_interval_start.hour
+    # DAG execution time converts from basic datetime to value in ["00z", "06z", "12z", "18z"]
+    hour = _floor_hours(data_interval_start.hour)
     time_str = f"{hour:02d}z"
     
     # Determine data type
     data_type = "oper" if hour in [0, 12] else "scda"
     
-    # Base URL for availability check
-    base_url = f"https://data.ecmwf.int/forecasts/{date_str}/{time_str}"
+    # Base URL for availability check and downloading files from that directory
+    base_url = f"https://data.ecmwf.int/forecasts/{date_str}/{time_str}/"
+    # base_url = f"https://data.ecmwf.int/forecasts/20260113/12z/"
     
     return {
         "date_str": date_str,
@@ -47,7 +77,7 @@ def generate_file_urls(params: Dict[str, str], steps: List[int]) -> List[str]:
     
     for step in steps:
         filename = f"{file_prefix}-{step}h-{params['data_type']}-fc.grib2"
-        url = f"{params['base_url']}/ifs/0p25/{params['data_type']}/{filename}"
+        url = f"{params['base_url']}ifs/0p25/{params['data_type']}/{filename}"
         urls.append(url)
     
     return urls

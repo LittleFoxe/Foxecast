@@ -30,7 +30,7 @@ def get_default_config() -> Dict:
         # MinIO/S3 settings
         "bucket_name": "forecast-data",
         "s3_prefix": "ifs",
-        "minio_endpoint": "http://minio:9100",
+        "minio_endpoint": "http://minio:9000",
 
         # RabbitMQ settings
         "rabbitmq_enabled": True,
@@ -107,7 +107,8 @@ with DAG(
     def prepare_sensor_endpoint(data_interval_start: datetime) -> str:
         """Prepares endpoint for HTTP sensor and returns it via XCom."""
         params = calculate_ecmwf_params(data_interval_start)
-        return params["base_url"]
+        # Removing the host and HTTP schema to return only the endpoint of the URL
+        return params["base_url"].replace("https://data.ecmwf.int/", "/")
 
     # 2. HTTP SENSOR FOR ECMWF AVAILABILITY CHECK
     check_ecmwf_availability = HttpSensor(
@@ -115,7 +116,7 @@ with DAG(
         http_conn_id="ecmwf_http",
         # Endpoint is set via Jinja templating, value is pulled from XCom of prepare_sensor_endpoint task
         endpoint="{{ ti.xcom_pull(task_ids='prepare_sensor_endpoint') }}",
-        method="HEAD",
+        method="GET",
         response_check=lambda response: response.status_code == 200,
         poke_interval=60,
         timeout=300,
@@ -142,12 +143,14 @@ with DAG(
             "total_files": len(urls)
         }
 
-    # 4. DOWNLOAD AND PROCESS FILES (parallel)
+    # 4. DOWNLOAD AND PROCESS FILES
     @task(task_id="download_and_process_files")
-    def download_and_process(urls_chunk: List[str], data_params: Dict, config: Dict) -> List[Dict]:
+    def download_and_process(urls_chunk: List[List[str]], data_params: Dict, config: Dict) -> List[Dict]:
         """
         Downloads a batch of files, saves to MinIO and sends notifications.
-        All settings are taken from the config passed to the task.
+        
+        Should be used instead of HttpOperator only to download the whole batch of files
+        in parallel threads
         """
         # Extract settings from configuration
         ecmwf_max_retries = config.get("ecmwf_max_retries", 3)
@@ -156,7 +159,7 @@ with DAG(
         min_file_size = config.get("min_file_size_bytes", 1024)
         bucket_name = config.get("bucket_name", "forecast-data")
         s3_prefix = config.get("s3_prefix", "ifs")
-        minio_endpoint = config.get("minio_endpoint", "http://minio:9100")
+        minio_endpoint = config.get("minio_endpoint", "http://minio:9000")
         rabbitmq_enabled = config.get("rabbitmq_enabled", True)
         rabbitmq_conn_id = config.get("rabbitmq_conn_id", "rabbitmq_default")
         rabbitmq_exchange = config.get("rabbitmq_exchange", "forecast_exchange")
@@ -172,94 +175,89 @@ with DAG(
             max_retries=ecmwf_max_retries,
             retry_delay=ecmwf_retry_delay
         )
-        s3_hook = S3Hook(aws_conn_id='minio_conn')
+        s3_hook = S3Hook(aws_conn_id='minio_con')
 
-        for url in urls_chunk:
-            try:
-                filename = url.split("/")[-1]
-                temp_path = f"/tmp/{filename}"
+        for urls in urls_chunk:
+            for url in urls:
+                try:
+                    print(url)
+                    filename = url.split("/")[-1]
+                    temp_path = f"/tmp/{filename}"
 
-                print(f"Downloading: {url}")
-                if downloader.download_file(url, temp_path):
-                    file_size = os.path.getsize(temp_path)
-                    if validate_file_size and file_size < min_file_size:
-                        raise Exception(f"File too small: {filename} ({file_size} bytes)")
+                    print(f"Downloading: {url}")
+                    if downloader.download_file(url, temp_path):
+                        file_size = os.path.getsize(temp_path)
+                        if validate_file_size and file_size < min_file_size:
+                            raise Exception(f"File too small: {filename} ({file_size} bytes)")
 
-                    s3_key = f"{s3_prefix}/{filename}"
-                    s3_hook.load_file(
-                        filename=temp_path,
-                        key=s3_key,
-                        bucket_name=bucket_name,
-                        replace=True
-                    )
+                        s3_key = f"{s3_prefix}/{filename}"
+                        s3_hook.load_file(
+                            filename=temp_path,
+                            key=s3_key,
+                            bucket_name=bucket_name,
+                            replace=True
+                        )
 
-                    file_url = f"{minio_endpoint}/{bucket_name}/{s3_key}"
+                        file_url = f"{minio_endpoint}/{bucket_name}/{s3_key}"
 
-                    rabbitmq_sent = False
-                    if rabbitmq_enabled:
-                        try:
-                            rabbitmq_hook = RabbitMQHook(rabbitmq_conn_id=rabbitmq_conn_id)
-                            message = {
-                                "file": file_url,
-                                "filename": filename,
-                                "size_bytes": file_size,
-                                "timestamp": datetime.now(timezone.utc).isoformat(),
-                                "params": data_params
-                            }
-                            rabbitmq_hook.publish(
-                                exchange=rabbitmq_exchange,
-                                routing_key=rabbitmq_routing_key,
-                                message=message,
-                                exchange_type=rabbitmq_exchange_type,
-                                properties={
-                                    'delivery_mode': rabbitmq_delivery_mode,
-                                    'priority': rabbitmq_priority,
-                                    'content_type': rabbitmq_content_type,
-                                    'timestamp': int(datetime.now(timezone.utc).timestamp())
+                        rabbitmq_sent = False
+                        if rabbitmq_enabled:
+                            try:
+                                rabbitmq_hook = RabbitMQHook(rabbitmq_conn_id=rabbitmq_conn_id)
+                                message = {
+                                    "file": file_url,
+                                    "filename": filename,
+                                    "size_bytes": file_size,
+                                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                                    "params": data_params
                                 }
-                            )
-                            rabbitmq_hook.close()
-                            rabbitmq_sent = True
-                        except Exception as rmq_error:
-                            print(f"Failed to send message to RabbitMQ: {str(rmq_error)}")
+                                rabbitmq_hook.publish(
+                                    exchange=rabbitmq_exchange,
+                                    routing_key=rabbitmq_routing_key,
+                                    message=message,
+                                    exchange_type=rabbitmq_exchange_type,
+                                    properties={
+                                        'delivery_mode': rabbitmq_delivery_mode,
+                                        'priority': rabbitmq_priority,
+                                        'content_type': rabbitmq_content_type,
+                                        'timestamp': int(datetime.now(timezone.utc).timestamp())
+                                    }
+                                )
+                                rabbitmq_hook.close()
+                                rabbitmq_sent = True
+                            except Exception as rmq_error:
+                                print(f"Failed to send message to RabbitMQ: {str(rmq_error)}")
 
-                    results.append({
-                        "filename": filename,
-                        "s3_key": s3_key,
-                        "file_url": file_url,
-                        "size_bytes": file_size,
-                        "rabbitmq_sent": rabbitmq_sent,
-                        "status": "success"
-                    })
+                        results.append({
+                            "filename": filename,
+                            "s3_key": s3_key,
+                            "file_url": file_url,
+                            "size_bytes": file_size,
+                            "rabbitmq_sent": rabbitmq_sent,
+                            "status": "success"
+                        })
 
-                    print(f"Successfully processed: {filename}")
+                        print(f"Successfully processed: {filename}")
 
-                    if cleanup_temp_files:
-                        os.remove(temp_path)
-                        print(f"Cleaned up temporary file: {temp_path}")
+                        if cleanup_temp_files:
+                            os.remove(temp_path)
+                            print(f"Cleaned up temporary file: {temp_path}")
 
-                else:
-                    results.append({
-                        "filename": filename,
-                        "status": "failed",
-                        "error": "Download failed"
-                    })
+                    else:
+                        results.append({
+                            "filename": filename,
+                            "status": "failed",
+                            "error": "Download failed"
+                        })
 
-            except Exception as e:
-                error_msg = f"Error processing {url}: {str(e)}"
-                print(error_msg)
-                results.append({
-                    "url": url,
-                    "filename": url.split("/")[-1] if "/" in url else url,
-                    "status": "failed",
-                    "error": str(e),
-                    "rabbitmq_sent": False
-                })
+                except Exception as e:
+                    # It will be just error logging for now
+                    raise e
         return results
 
     # 5. AGGREGATE RESULTS
     @task(task_id="aggregate_results")
-    def aggregate_results(results_list: List[List[Dict]], config: Dict) -> Dict:
+    def aggregate_results(results_list: List[Dict], config: Dict) -> Dict:
         """Aggregates results from all workers."""
         rabbitmq_enabled = config.get("rabbitmq_enabled", True)
 
@@ -342,8 +340,7 @@ with DAG(
             connection.close()
             return {"status": "connected", "connection_id": rabbitmq_conn_id}
         except Exception as e:
-            print(f"RabbitMQ connection test failed: {str(e)}")
-            return {"status": "failed", "error": str(e)}
+            raise e
 
     # ===== EXECUTION FLOW DEFINITION =====
     # 1. Load configuration
@@ -353,6 +350,8 @@ with DAG(
     endpoint = prepare_sensor_endpoint()
     # Dependency: config >> endpoint >> check_ecmwf_availability
     endpoint.set_upstream(config)
+
+    check_ecmwf_availability.set_upstream(endpoint)
 
     # 3. Generate download URLs (needs both config and availability check)
     url_data = generate_urls(config=config)
@@ -369,8 +368,8 @@ with DAG(
     final_summary = aggregate_results(download_results, config=config)
     cleanup = cleanup_temp_files(config=config)
     rabbitmq_test = test_rabbitmq_connection(config=config)
+    rabbitmq_test.set_upstream(config)
 
     # Final dependencies
     final_summary.set_upstream(download_results)
     cleanup.set_upstream(final_summary)
-    rabbitmq_test.set_upstream(final_summary)
