@@ -19,7 +19,7 @@ services:
     container_name: inserter-forecast
     ports:
       - "8001:8000"
-    env_file: ./secret/test_env/.env
+    env_file: ./secret/main_env/.env
 
     depends_on:
       test_inserter:
