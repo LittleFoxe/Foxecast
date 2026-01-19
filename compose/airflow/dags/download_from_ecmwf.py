@@ -125,6 +125,7 @@ with DAG(
     )
 
     # 3. GENERATE DOWNLOAD URLS
+    """TODO: Move the downloading logic to some microservice or submodule"""
     @task(task_id="generate_download_urls")
     def generate_urls(config: Dict, data_interval_start: datetime) -> Dict:
         """Generates all download URLs using configuration."""
@@ -144,6 +145,7 @@ with DAG(
         }
 
     # 4. DOWNLOAD AND PROCESS FILES
+    """TODO: Remove the redundant double 'for' and replace it for some microservice to download the data"""
     @task(task_id="download_and_process_files")
     def download_and_process(urls_chunk: List[List[str]], data_params: Dict, config: Dict) -> List[Dict]:
         """
@@ -175,7 +177,7 @@ with DAG(
             max_retries=ecmwf_max_retries,
             retry_delay=ecmwf_retry_delay
         )
-        s3_hook = S3Hook(aws_conn_id='minio_con')
+        s3_hook = S3Hook(aws_conn_id='minio_conn')
 
         for urls in urls_chunk:
             for url in urls:
