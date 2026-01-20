@@ -81,36 +81,3 @@ def generate_file_urls(params: Dict[str, str], steps: List[int]) -> List[str]:
         urls.append(url)
     
     return urls
-
-
-def round_robin_distribute(urls: List[str], num_workers: int) -> List[List[str]]:
-    """
-    Distribute URLs among workers using round robin algorithm
-    Params:
-        urls (List[str]): list of files' URLs from ECMWF Open Data
-        num_workers (int): number of tasks to distribute URLs to
-    Returns:
-        List[List[str]]: list of lists, each containing URLs for a worker
-    """
-    distributed = [[] for _ in range(num_workers)]
-    
-    for i, url in enumerate(urls):
-        worker_idx = i % num_workers
-        distributed[worker_idx].append(url)
-    
-    return distributed
-
-
-def validate_ecmwf_response(response) -> bool:
-    """
-    Validate ECMWF API response
-    """
-    if response.status_code == 200:
-        return True
-    elif response.status_code == 429:
-        # Rate limiting
-        return False
-    elif response.status_code == 404:
-        raise AirflowException(f"ECMWF resource not found: {response.url}")
-    else:
-        raise AirflowException(f"Unexpected ECMWF response: {response.status_code}")
