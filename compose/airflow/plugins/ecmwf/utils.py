@@ -57,7 +57,6 @@ def calculate_ecmwf_params(data_interval_start: datetime) -> Dict[str, str]:
     
     # Base URL for availability check and downloading files from that directory
     base_url = f"https://data.ecmwf.int/forecasts/{date_str}/{time_str}/"
-    # base_url = f"https://data.ecmwf.int/forecasts/20260113/12z/"
     
     return {
         "date_str": date_str,
