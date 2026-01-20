@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import os
 from typing import Dict
 import requests
@@ -39,13 +39,8 @@ with DAG(
     ### Configuration:
     Set variables in Airflow UI: Admin -> Variables or env-file
     Key: `ecmwf_downloader_config`
-    Value (JSON): '''
-    {
-        "bucket_name":"...",
-        "rabbitmq_exchange":"...",
-        "rabbitmq_routing_key":"..."
-    }
-    '''.
+    Value (JSON):
+    `{ "bucket_name":"...", "rabbitmq_exchange":"...", "rabbitmq_routing_key":"..." }`
     """
 ) as dag:
     
@@ -123,6 +118,10 @@ with DAG(
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
+
+
+
+    """GRAPH IMPLEMENTATION SECTOR"""
 
     # 1. Fetch Config once
     current_config = get_config()
