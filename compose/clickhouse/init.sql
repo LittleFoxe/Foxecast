@@ -60,12 +60,12 @@ ORDER BY (parameter, surface_type, surface_value, forecast_date, forecast_hour, 
 SETTINGS index_granularity = 8192;
 
 -- Create auxiliary table to store data while it downloads
-CREATE TABLE IF NOT EXISTS forecast_temp AS forecast_data
+CREATE TABLE IF NOT EXISTS forecast_temp AS forecast_data;
 
 -- Create archive table to store old partitions
-CREATE TABLE IF NOT EXISTS forecast_archive AS forecast_data
+CREATE TABLE IF NOT EXISTS forecast_archive AS forecast_data;
 
 -- Init the testing DB
 USE forecast_test;
 -- Create table to store forecast data
-CREATE TABLE IF NOT EXISTS forecast_test.forecast_data AS forecast_main.forecast_data
+CREATE TABLE IF NOT EXISTS forecast_test.forecast_data AS forecast_main.forecast_data;
