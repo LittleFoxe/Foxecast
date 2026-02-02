@@ -1,6 +1,6 @@
 services:
   test_inserter:
-    image: test_foxecast_inserter:1.0.0
+    image: test_foxecast_inserter:1.0.1
     container_name: test_inserter
     env_file: ./secret/test_env/.env
 
@@ -15,7 +15,7 @@ services:
       - forecast-network
 
   inserter:
-    image: foxecast_inserter:1.0.0
+    image: foxecast_inserter:1.0.1
     container_name: inserter-forecast
     ports:
       - "8001:8000"

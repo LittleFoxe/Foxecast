@@ -56,7 +56,7 @@ services:
       retries: 5
 
   airflow-redis:
-    image: redis:latest
+    image: redis:8.4.0
     container_name: airflow-redis
     hostname: airflow-redis
     restart: unless-stopped

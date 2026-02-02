@@ -1,6 +1,4 @@
 #!/bin/bash
-set -e
-
 echo "Waiting for MinIO to start..."
 
 # Delay for full initialization of MinIO

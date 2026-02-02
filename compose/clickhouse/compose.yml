@@ -1,7 +1,6 @@
 services:
   clickhouse:
-    # Using latest for now, but in production it should be some stable version
-    image: clickhouse:latest
+    image: clickhouse:25.8
     container_name: clickhouse-forecast
     hostname: clickhouse
     restart: unless-stopped
