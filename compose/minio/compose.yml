@@ -1,3 +1,7 @@
+volumes:
+  minio_data:
+    external: false
+
 services:
   minio:
     # Using latest for now, but in production it should be some stable version

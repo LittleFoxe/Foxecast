@@ -1,3 +1,7 @@
+volumes:
+  rabbitmq_data:
+    external: false
+
 services:
   clickhouse:
     image: clickhouse:25.8

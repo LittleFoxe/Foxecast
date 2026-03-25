@@ -12,21 +12,6 @@ include:
 
 # All services should be added as separate modules through 'include'
 
-volumes:
-  # Explicitly declaring volumes
-  clickhouse_users:
-    external: false
-  clickhouse_data:
-    external: false
-  minio_data:
-    external: false
-  rabbitmq_data:
-    external: false
-  prometheus_data:
-    external: false
-  grafana_data:
-    external: false
-
 networks:
   forecast-network:
     driver: bridge
