@@ -1,5 +1,5 @@
-# It is recommended to use Docker Compose version 3.8+ because of
-# some attributes, unsupported in older versions (e.g. 'include')
+# It is recommended to use Docker Compose version 3.8+ because some 
+# attributes are not unsupported in older versions (e.g. 'include')
 
 # Including submodules to the main compose file
 include:
@@ -8,6 +8,7 @@ include:
   - path: ./minio/compose.yml
   - path: ./rabbitmq/compose.yml
   - path: ./airflow/compose.yml
+  - path: ./monitoring/compose.yml
 
 # All services should be added as separate modules through 'include'
 
@@ -20,6 +21,10 @@ volumes:
   minio_data:
     external: false
   rabbitmq_data:
+    external: false
+  prometheus_data:
+    external: false
+  grafana_data:
     external: false
 
 networks:
